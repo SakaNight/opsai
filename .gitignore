@@ -1,0 +1,97 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Temporary files
+.tmp/
+.temp/
+*.tmp
+
+# Documentation files (sensitive or large)
+docs/*.md
+docs/images/
+docs/*.pdf
+docs/*.doc
+docs/*.docx
+
+# Keep README files
+!README.md
+!docs/README.md
+
+# Specific sensitive docs to ignore
+docs/OpsAI_Project_Record_*.md
+docs/ops_ai_realtime_incident_knowledge_copilot_项目规划与执行手册（生产级_mvp）.md
+docs/OpsAI项目概述.docx
+
+# Local development
+.local/
+local/
+
+# Docker
+.dockerignore
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Kubernetes
+*.kubeconfig
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# Large binary files
+*.bin
+*.dat
+*.db
