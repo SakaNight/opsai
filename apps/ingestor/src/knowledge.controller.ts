@@ -29,7 +29,7 @@ export class KnowledgeController {
   ) {}
 
   /**
-   * 处理单个文档
+   * Process single document
    */
   @Post('documents')
   async processDocument(@Body() documentInput: DocumentInput): Promise<ProcessedDocument> {
@@ -42,7 +42,7 @@ export class KnowledgeController {
   }
 
   /**
-   * 批量处理文档
+   * Batch process documents
    */
   @Post('documents/batch')
   async processDocumentsBatch(@Body() documents: DocumentInput[]): Promise<ProcessedDocument[]> {
@@ -60,7 +60,7 @@ export class KnowledgeController {
   }
 
   /**
-   * 获取文档统计信息
+   * Get document statistics
    */
   @Get('documents/stats')
   async getDocumentStats() {
@@ -79,7 +79,7 @@ export class KnowledgeController {
   }
 
   /**
-   * 删除文档
+   * Delete document
    */
   @Delete('documents/:id')
   async deleteDocument(@Param('id') id: string) {
@@ -98,7 +98,7 @@ export class KnowledgeController {
   }
 
   /**
-   * 高级搜索
+   * Advanced search
    */
   @Post('search/advanced')
   async advancedSearch(@Body() searchRequest: {
@@ -137,7 +137,7 @@ export class KnowledgeController {
   }
 
   /**
-   * 搜索相似文档
+   * Search similar documents
    */
   @Get('search')
   async searchDocuments(@Query() searchQuery: SearchQuery) {
@@ -152,7 +152,7 @@ export class KnowledgeController {
       metadata
     } = searchQuery;
     
-    // 构建过滤器
+    // Build filters
     const filters: any = {};
     
     if (source) {
@@ -177,7 +177,7 @@ export class KnowledgeController {
       try {
         filters.metadata = JSON.parse(metadata);
       } catch (error) {
-        // 如果JSON解析失败，忽略metadata参数
+        // If JSON parsing fails, ignore metadata parameter
       }
     }
     
@@ -198,7 +198,7 @@ export class KnowledgeController {
   }
 
   /**
-   * 获取知识库统计信息
+   * Get knowledge base statistics
    */
   @Get('stats')
   async getKnowledgeBaseStats() {
@@ -212,7 +212,7 @@ export class KnowledgeController {
   }
 
   /**
-   * 列出所有集合
+   * List all collections
    */
   @Get('collections')
   async listCollections() {
@@ -226,7 +226,7 @@ export class KnowledgeController {
   }
 
   /**
-   * 获取集合信息
+   * Get collection information
    */
   @Get('collections/:name')
   async getCollectionInfo(@Param('name') name: string) {
@@ -247,7 +247,7 @@ export class KnowledgeController {
   }
 
   /**
-   * 删除集合
+   * Delete collection
    */
   @Delete('collections/:name')
   async deleteCollection(@Param('name') name: string) {
@@ -268,7 +268,7 @@ export class KnowledgeController {
   }
 
   /**
-   * 健康检查
+   * Health check
    */
   @Get('health')
   async getHealth() {

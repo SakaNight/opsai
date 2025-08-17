@@ -153,7 +153,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       return current <= limit;
     } catch (error) {
       this.logger.error(`Rate limit check failed for key ${key}:`, error);
-      return false; // 失败时允许通过
+      return false; // Allow pass on failure
     }
   }
 

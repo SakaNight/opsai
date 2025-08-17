@@ -1,115 +1,115 @@
 #!/bin/bash
 
-# OpsAI 开发启动脚本
-# 使用方法: ./start-dev.sh [service]
+# OpsAI Development Startup Script
+# Usage: ./start-dev.sh [service]
 
-echo "🚀 OpsAI 开发环境启动脚本"
+echo "🚀 OpsAI Development Environment Startup Script"
 echo "================================"
 
-# 检查是否在项目根目录
+# Check if in project root directory
 if [ ! -f "pnpm-workspace.yaml" ]; then
-    echo "❌ 错误: 请在项目根目录执行此脚本"
-    echo "当前目录: $(pwd)"
-    echo "请执行: cd /Users/arieschan/Desktop/Work/Project/opsai"
+    echo "❌ Error: Please run this script in the project root directory"
+    echo "Current directory: $(pwd)"
+    echo "Please execute: cd /Users/arieschan/Desktop/Work/Project/opsai"
     exit 1
 fi
 
-echo "✅ 项目根目录确认: $(pwd)"
+echo "✅ Project root directory confirmed: $(pwd)"
 
-# 检查基础设施状态
+# Check infrastructure status
 echo ""
-echo "🔍 检查基础设施状态..."
+echo "🔍 Checking infrastructure status..."
 if docker compose -f infra/local/docker-compose.yaml ps | grep -q "Up"; then
-    echo "✅ Docker 基础设施正在运行"
+    echo "✅ Docker infrastructure is running"
 else
-    echo "⚠️  Docker 基础设施未运行，正在启动..."
+    echo "⚠️  Docker infrastructure is not running, starting..."
     docker compose -f infra/local/docker-compose.yaml up -d
-    echo "⏳ 等待基础设施启动..."
+    echo "⏳ Waiting for infrastructure to start..."
     sleep 10
 fi
 
-# 检查服务状态
+# Check service status
 echo ""
-echo "🔍 检查服务状态..."
+echo "🔍 Checking service status..."
 
-# 检查 API 服务
+# Check API service
 if curl -s http://localhost:3000/health > /dev/null 2>&1; then
-    echo "✅ API 服务运行中 (端口 3000)"
+    echo "✅ API service is running (port 3000)"
 else
-    echo "❌ API 服务未运行 (端口 3000)"
+    echo "❌ API service is not running (port 3000)"
 fi
 
-# 检查 Ingestor 服务
+# Check Ingestor service
 if curl -s http://localhost:3002/api/v1/health > /dev/null 2>&1; then
-    echo "✅ Ingestor 服务运行中 (端口 3002)"
+    echo "✅ Ingestor service is running (port 3002)"
 else
-    echo "❌ Ingestor 服务未运行 (端口 3002)"
+    echo "❌ Ingestor service is not running (port 3002)"
 fi
 
-# 检查 Agent 服务
+# Check Agent service
 if curl -s http://localhost:3003/health > /dev/null 2>&1; then
-    echo "✅ Agent 服务运行中 (端口 3003)"
+    echo "✅ Agent service is running (port 3003)"
 else
-    echo "❌ Agent 服务未运行 (端口 3003)"
+    echo "❌ Agent service is not running (port 3003)"
 fi
 
-# 启动指定服务
+# Start specified service
 if [ "$1" = "api" ]; then
     echo ""
-    echo "🚀 启动 API 服务..."
+    echo "🚀 Starting API service..."
     cd apps/api && pnpm run start:dev
 elif [ "$1" = "ingestor" ]; then
     echo ""
-    echo "🚀 启动 Ingestor 服务..."
+    echo "🚀 Starting Ingestor service..."
     cd apps/ingestor && pnpm run start:dev
 elif [ "$1" = "agent" ]; then
     echo ""
-    echo "🚀 启动 Agent 服务..."
+    echo "🚀 Starting Agent service..."
     cd apps/agent && pnpm run start:dev
 elif [ "$1" = "test" ]; then
     echo ""
-    echo "🧪 测试 MVP 2 功能..."
-    echo "1. 测试健康检查..."
-    curl -s http://localhost:3002/api/v1/health | jq . 2>/dev/null || echo "健康检查失败"
+    echo "🧪 Testing MVP 2 functionality..."
+    echo "1. Testing health check..."
+    curl -s http://localhost:3002/api/v1/health | jq . 2>/dev/null || echo "Health check failed"
     
     echo ""
-    echo "2. 测试文档处理..."
+    echo "2. Testing document processing..."
     curl -s -X POST http://localhost:3002/api/v1/knowledge/documents \
         -H "Content-Type: application/json" \
-        -d '{"content":"这是一个测试文档，用于验证文档处理功能。","source":"test","title":"测试文档"}' | jq . 2>/dev/null || echo "文档处理测试失败"
+        -d '{"content":"This is a test document for validating document processing functionality.","source":"test","title":"Test Document"}' | jq . 2>/dev/null || echo "Document processing test failed"
     
     echo ""
-    echo "3. 测试知识库统计..."
-    curl -s http://localhost:3002/api/v1/knowledge/stats | jq . 2>/dev/null || echo "知识库统计测试失败"
+    echo "3. Testing knowledge base statistics..."
+    curl -s http://localhost:3002/api/v1/knowledge/stats | jq . 2>/dev/null || echo "Knowledge base statistics test failed"
 elif [ "$1" = "test-mvp3" ]; then
     echo ""
-    echo "🧪 测试 MVP 3 功能..."
-    echo "1. 测试 Agent 健康检查..."
-    curl -s http://localhost:3003/health | jq . 2>/dev/null || echo "Agent 健康检查失败"
+    echo "🧪 Testing MVP 3 functionality..."
+    echo "1. Testing Agent health check..."
+    curl -s http://localhost:3003/health | jq . 2>/dev/null || echo "Agent health check failed"
     
     echo ""
-    echo "2. 测试知识库连接..."
-    curl -s http://localhost:3003/api/v1/knowledge/validate | jq . 2>/dev/null || echo "知识库连接测试失败"
+    echo "2. Testing knowledge base connection..."
+    curl -s http://localhost:3003/api/v1/knowledge/validate | jq . 2>/dev/null || echo "Knowledge base connection test failed"
     
     echo ""
-    echo "3. 测试工作流执行..."
+    echo "3. Testing workflow execution..."
     curl -s -X POST http://localhost:3003/api/v1/workflow/execute \
         -H "Content-Type: application/json" \
-        -d '{"eventId":"test_001","eventData":{"title":"Test Incident","severity":"medium"}}' | jq . 2>/dev/null || echo "工作流执行测试失败"
+        -d '{"eventId":"test_001","eventData":{"title":"Test Incident","severity":"medium"}}' | jq . 2>/dev/null || echo "Workflow execution test failed"
 else
     echo ""
-    echo "📋 可用的启动选项:"
-    echo "  ./start-dev.sh api      - 启动 API 服务"
-    echo "  ./start-dev.sh ingestor - 启动 Ingestor 服务"
-    echo "  ./start-dev.sh test     - 测试 MVP 2 功能"
+    echo "📋 Available startup options:"
+    echo "  ./start-dev.sh api      - Start API service"
+    echo "  ./start-dev.sh ingestor - Start Ingestor service"
+    echo "  ./start-dev.sh test     - Test MVP 2 functionality"
     echo ""
-    echo "📊 当前项目状态:"
-    echo "  ✅ MVP 1: 已完成 (100%)"
-    echo "  ✅ MVP 2: 已完成 (100%)"
-    echo "  ✅ MVP 3: 架构完成 (100%) - 需要配置和测试"
+    echo "📊 Current project status:"
+    echo "  ✅ MVP 1: Completed (100%)"
+    echo "  ✅ MVP 2: Completed (100%)"
+    echo "  ✅ MVP 3: Architecture completed (100%) - Configuration and testing needed"
     echo ""
-    echo "🎯 下一步建议:"
-    echo "  1. 启动 Agent 服务: ./start-dev.sh agent"
-    echo "  2. 测试 MVP 3 功能: ./start-dev.sh test-mvp3"
-    echo "  3. 配置 OpenAI API key 和 Qdrant 连接"
+    echo "🎯 Next steps:"
+    echo "  1. Start Agent service: ./start-dev.sh agent"
+    echo "  2. Test MVP 3 functionality: ./start-dev.sh test-mvp3"
+    echo "  3. Configure OpenAI API key and Qdrant connection"
 fi

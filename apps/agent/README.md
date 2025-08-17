@@ -237,7 +237,7 @@ Monitor the `/health` endpoint to verify service status and dependencies.
 - [OpsAI Project Overview](../README.md)
 - [API Service Documentation](../api/README.md)
 - [Ingestor Service Documentation](../ingestor/README.md)
-- [Project Planning Document](../../docs/ops_ai_realtime_incident_knowledge_copilot_项目规划与执行手册（生产级_mvp）.md)
+- [Project Planning Document](../../docs/ops_ai_realtime_incident_knowledge_copilot_project_planning_and_execution_manual_production_mvp.md)
 
 ## 📄 License
 

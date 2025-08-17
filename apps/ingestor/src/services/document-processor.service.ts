@@ -25,13 +25,13 @@ export interface ProcessedDocument {
 @Injectable()
 export class DocumentProcessorService {
   private readonly logger = new Logger(DocumentProcessorService.name);
-  private readonly defaultChunkSize = 1000; // 字符数
-  private readonly overlapSize = 200; // 重叠字符数
+  private readonly defaultChunkSize = 1000; // Character count
+  private readonly overlapSize = 200; // Overlap character count
 
   constructor(private readonly qdrantService: QdrantService) {}
 
   /**
-   * 处理文档：分块、向量化、存储
+   * Process document: chunking, vectorization, storage
    */
   async processDocument(
     content: string,
@@ -47,17 +47,17 @@ export class DocumentProcessorService {
     try {
       this.logger.log(`Starting document processing for source: ${metadata.source}`);
       
-      // 1. 文本分块
+      // 1. Text chunking
       this.logger.log('Step 1: Text chunking...');
       const chunks = this.chunkText(content, metadata);
       this.logger.log(`Created ${chunks.length} chunks`);
       
-      // 2. 向量化
+      // 2. Vectorization
       this.logger.log('Step 2: Vectorization...');
       const vectorPoints = await this.vectorizeChunks(chunks);
       this.logger.log(`Vectorized ${vectorPoints.length} chunks`);
       
-      // 3. 存储到 Qdrant
+      // 3. Store to Qdrant
       this.logger.log('Step 3: Storing to Qdrant...');
       await this.qdrantService.upsertPoints('opsai-knowledge', vectorPoints);
       this.logger.log('Successfully stored to Qdrant');
@@ -86,7 +86,7 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 文本分块处理
+   * Text chunking processing
    */
   private chunkText(
     content: string,
@@ -99,21 +99,21 @@ export class DocumentProcessorService {
   ): DocumentChunk[] {
     const chunks: DocumentChunk[] = [];
     
-    // 如果内容为空或太短，直接创建一个块
+    // If content is empty or too short, create a single chunk directly
     if (!content || content.trim().length === 0) {
       chunks.push(this.createChunk('', 0, metadata));
       chunks.forEach(chunk => chunk.metadata.totalChunks = 1);
       return chunks;
     }
     
-    // 如果内容长度小于默认块大小，直接创建一个块
+    // If content length is less than default chunk size, create a single chunk directly
     if (content.length <= this.defaultChunkSize) {
       chunks.push(this.createChunk(content, 0, metadata));
       chunks.forEach(chunk => chunk.metadata.totalChunks = 1);
       return chunks;
     }
     
-    // 正常分块逻辑
+    // Normal chunking logic
     const words = content.split(/\s+/);
     let currentChunk = '';
     let chunkIndex = 0;
@@ -123,11 +123,11 @@ export class DocumentProcessorService {
       const potentialChunk = currentChunk + (currentChunk ? ' ' : '') + word;
       
       if (potentialChunk.length > this.defaultChunkSize && currentChunk) {
-        // 创建当前块
+        // Create current chunk
         chunks.push(this.createChunk(currentChunk, chunkIndex, metadata));
         chunkIndex++;
         
-        // 处理重叠
+        // Handle overlap
         if (this.overlapSize > 0) {
           const overlapWords = currentChunk.split(/\s+/).slice(-Math.floor(this.overlapSize / 5));
           currentChunk = overlapWords.join(' ') + ' ' + word;
@@ -139,17 +139,17 @@ export class DocumentProcessorService {
       }
     }
     
-    // 添加最后一个块
+    // Add the last chunk
     if (currentChunk.trim()) {
       chunks.push(this.createChunk(currentChunk, chunkIndex, metadata));
     }
     
-    // 确保至少有一个块
+    // Ensure at least one chunk exists
     if (chunks.length === 0) {
       chunks.push(this.createChunk(content, 0, metadata));
     }
     
-    // 更新总块数
+    // Update total chunk count
     chunks.forEach(chunk => {
       chunk.metadata.totalChunks = chunks.length;
     });
@@ -158,7 +158,7 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 创建文档块
+   * Create document chunk
    */
   private createChunk(
     content: string,
@@ -171,19 +171,19 @@ export class DocumentProcessorService {
     }
   ): DocumentChunk {
     return {
-      id: Date.now() + chunkIndex, // 使用纯数字ID，符合Qdrant要求
+      id: Date.now() + chunkIndex, // Use pure numeric ID, compliant with Qdrant requirements
       content: content.trim(),
       metadata: {
         ...metadata,
         chunkIndex,
-        totalChunks: 0, // 将在 chunkText 方法中更新
+        totalChunks: 0, // Will be updated in chunkText method
         timestamp: new Date(),
       },
     };
   }
 
   /**
-   * 向量化文档块（简单实现，实际应使用 OpenAI embedding）
+   * Vectorize document chunks (simple implementation, should use OpenAI embedding in production)
    */
   private async vectorizeChunks(chunks: DocumentChunk[]): Promise<VectorPoint[]> {
     return chunks.map(chunk => ({
@@ -197,17 +197,17 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 改进的哈希向量化（用于测试，实际应使用 OpenAI embedding）
+   * Improved hash vectorization (for testing, should use OpenAI embedding in production)
    */
   private simpleHashVector(text: string): number[] {
     const vector = new Array(1536).fill(0);
     const words = text.toLowerCase().split(/\s+/);
     
-    // 特征提取：词频、字符频率、位置信息
+    // Feature extraction: word frequency, character frequency, position information
     const wordFreq: { [key: string]: number } = {};
     const charFreq: { [key: string]: number } = {};
     
-    // 计算词频和字符频率
+    // Calculate word frequency and character frequency
     words.forEach(word => {
       wordFreq[word] = (wordFreq[word] || 0) + 1;
       for (const char of word) {
@@ -215,10 +215,10 @@ export class DocumentProcessorService {
       }
     });
     
-    // 生成向量
+    // Generate vector
     let vectorIndex = 0;
     
-    // 1. 词频特征 (前256维)
+    // 1. Word frequency features (first 256 dimensions)
     for (const [word, freq] of Object.entries(wordFreq)) {
       if (vectorIndex < 256) {
         const hash = this.hashString(word);
@@ -227,7 +227,7 @@ export class DocumentProcessorService {
       }
     }
     
-    // 2. 字符频率特征 (256-512维)
+    // 2. Character frequency features (256-512 dimensions)
     for (const [char, freq] of Object.entries(charFreq)) {
       if (vectorIndex < 512) {
         const hash = this.hashString(char);
@@ -236,7 +236,7 @@ export class DocumentProcessorService {
       }
     }
     
-    // 3. 位置特征 (512-768维)
+    // 3. Position features (512-768 dimensions)
     for (let i = 0; i < 256 && vectorIndex < 768; i++) {
       if (i < words.length) {
         const word = words[i];
@@ -246,8 +246,8 @@ export class DocumentProcessorService {
       }
     }
     
-    // 4. 语义特征 (768-1024维)
-    const semanticWords = ['ai', 'artificial', 'intelligence', 'machine', 'learning', 'automation', 'monitoring', 'system', 'data', 'analysis', '运维', '自动化', '监控', '系统', '数据', '分析'];
+    // 4. Semantic features (768-1024 dimensions)
+    const semanticWords = ['ai', 'artificial', 'intelligence', 'machine', 'learning', 'automation', 'monitoring', 'system', 'data', 'analysis', 'operations', 'automation', 'monitoring', 'system', 'data', 'analysis'];
     for (let i = 0; i < 256 && vectorIndex < 1024; i++) {
       const semanticWord = semanticWords[i % semanticWords.length];
       const hasWord = words.some(word => word.includes(semanticWord));
@@ -255,30 +255,30 @@ export class DocumentProcessorService {
       vectorIndex++;
     }
     
-    // 5. 长度特征 (1024-1280维)
+    // 5. Length features (1024-1280 dimensions)
     for (let i = 0; i < 256 && vectorIndex < 1280; i++) {
       if (i < words.length) {
         const word = words[i];
-        vector[vectorIndex] = Math.min(word.length / 20, 1.0); // 归一化单词长度
+        vector[vectorIndex] = Math.min(word.length / 20, 1.0); // Normalize word length
         vectorIndex++;
       }
     }
     
-    // 6. 随机特征 (1280-1536维)
+    // 6. Random features (1280-1536 dimensions)
     for (let i = 0; i < 256 && vectorIndex < 1536; i++) {
       const hash = this.hashString(text + i.toString());
       vector[vectorIndex] = (hash % 1000) / 1000;
       vectorIndex++;
     }
     
-    // 确保向量被完全填充
+    // Ensure vector is completely filled
     while (vectorIndex < 1536) {
       const hash = this.hashString(text + vectorIndex.toString());
       vector[vectorIndex] = (hash % 1000) / 1000;
       vectorIndex++;
     }
     
-    // 归一化向量
+    // Normalize vector
     const magnitude = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
     if (magnitude > 0) {
       vector.forEach((val, i) => {
@@ -290,20 +290,20 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 简单的字符串哈希函数
+   * Simple string hash function
    */
   private hashString(str: string): number {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // 转换为 32 位整数
+      hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash);
   }
 
   /**
-   * 搜索相似文档
+   * Search for similar documents
    */
   async searchSimilarDocuments(
     query: string,
@@ -319,7 +319,7 @@ export class DocumentProcessorService {
     try {
       this.logger.debug(`Searching for query: "${query}" with limit: ${limit}, threshold: ${scoreThreshold}, filters:`, filters);
       
-      // 验证输入参数
+      // Validate input parameters
       if (!query || query.trim().length === 0) {
         throw new Error('Search query cannot be empty');
       }
@@ -335,7 +335,7 @@ export class DocumentProcessorService {
       const queryVector = this.simpleHashVector(query);
       this.logger.debug(`Generated query vector with dimension: ${queryVector.length}`);
       
-      // 构建搜索过滤器
+      // Build search filters
       const searchFilters = this.buildSearchFilters(filters);
       
       const results = await this.qdrantService.searchSimilar(
@@ -348,7 +348,7 @@ export class DocumentProcessorService {
       
       this.logger.debug(`Search returned ${results.length} results`);
       
-      // 应用后处理过滤器
+      // Apply post-search filters
       const filteredResults = this.applyPostSearchFilters(results, filters);
       
       return filteredResults.map(result => ({
@@ -364,7 +364,7 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 构建搜索过滤器
+   * Build search filters
    */
   private buildSearchFilters(filters?: {
     source?: string;
@@ -403,7 +403,7 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 应用后搜索过滤器
+   * Apply post-search filters
    */
   private applyPostSearchFilters(
     results: Array<{ id: number; score: number; payload: Record<string, any> }>,
@@ -417,7 +417,7 @@ export class DocumentProcessorService {
     if (!filters) return results;
     
     return results.filter(result => {
-      // 应用元数据过滤器
+      // Apply metadata filters
       if (filters.metadata) {
         for (const [key, value] of Object.entries(filters.metadata)) {
           if (result.payload[key] !== value) {
@@ -431,7 +431,7 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 高级语义搜索
+   * Advanced semantic search
    */
   async advancedSearch(
     query: string,
@@ -461,22 +461,22 @@ export class DocumentProcessorService {
 
       this.logger.debug(`Advanced search for query: "${query}" with options:`, options);
 
-      // 生成查询向量
+      // Generate query vector
       const queryVector = this.simpleHashVector(query);
       
-      // 执行搜索
+      // Execute search
       const results = await this.qdrantService.searchSimilar(
         'opsai-knowledge',
         queryVector,
-        limit * 2, // 获取更多结果用于排序
+        limit * 2, // Get more results for sorting
         scoreThreshold,
         filters
       );
 
-      // 应用后处理过滤器
+      // Apply post-processing filters
       let filteredResults = this.applyPostSearchFilters(results, filters);
 
-      // 根据排序选项排序结果
+      // Sort results according to sort options
       if (sortBy === 'date') {
         filteredResults.sort((a, b) => {
           const dateA = new Date(a.payload.timestamp || 0);
@@ -490,9 +490,9 @@ export class DocumentProcessorService {
           return sourceA.localeCompare(sourceB);
         });
       }
-      // relevance 排序保持Qdrant的相似度排序
+      // Relevance sorting maintains Qdrant's similarity sorting
 
-      // 限制结果数量
+      // Limit result count
       const finalResults = filteredResults.slice(0, limit);
 
       const searchTime = Date.now() - startTime;
@@ -517,7 +517,7 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 批量处理文档
+   * Batch process documents
    */
   async processDocumentsBatch(
     documents: Array<{ content: string; metadata: any }>
@@ -537,7 +537,7 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 获取知识库统计信息
+   * Get knowledge base statistics
    */
   async getKnowledgeBaseStats(): Promise<any> {
     try {
@@ -558,7 +558,7 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 获取文档统计信息
+   * Get document statistics
    */
   async getDocumentStats(): Promise<any> {
     try {
@@ -577,7 +577,7 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 删除文档
+   * Delete document
    */
   async deleteDocument(documentId: number): Promise<void> {
     try {

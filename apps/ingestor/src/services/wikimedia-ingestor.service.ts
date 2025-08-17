@@ -96,10 +96,10 @@ export class WikimediaIngestorService implements OnModuleInit {
 
   private async processWikimediaEvent(wikiEvent: any) {
     try {
-      // 分析事件严重性
+      // Analyze event severity
       const severity = this.analyzeWikimediaSeverity(wikiEvent);
       
-      // 创建事件记录
+      // Create event record
       const event = new this.eventModel({
         source: 'wikimedia',
         type: 'change',
@@ -118,11 +118,11 @@ export class WikimediaIngestorService implements OnModuleInit {
         },
       });
 
-      // 保存到数据库
+      // Save to database
       const savedEvent = await event.save();
       this.logger.debug(`Processed Wikimedia event: ${savedEvent._id}`);
 
-      // 发送到Kafka
+      // Send to Kafka
       await this.kafkaService.sendMessage('opsai-events', {
         eventId: savedEvent._id.toString(),
         source: 'wikimedia',
@@ -131,10 +131,10 @@ export class WikimediaIngestorService implements OnModuleInit {
         summary: savedEvent.summary,
       });
 
-      // 记录日志
+      // Log event
       await this.loggingService.logEvent('wikimedia', 'change', severity, savedEvent._id.toString());
 
-      // 如果是高严重性事件，创建事件
+      // If it's a high severity event, create an incident
       if (severity === 'high' || severity === 'critical') {
         await this.createIncidentFromEvent(savedEvent);
       }
@@ -145,12 +145,12 @@ export class WikimediaIngestorService implements OnModuleInit {
   }
 
   private analyzeWikimediaSeverity(wikiEvent: any): string {
-    // 分析编辑类型和内容变化
+    // Analyze edit type and content changes
     const isBot = wikiEvent.bot;
     const isMinor = wikiEvent.minor;
     const comment = (wikiEvent.comment || '').toLowerCase();
     
-    // 检查是否有敏感关键词
+    // Check for sensitive keywords
     const sensitiveKeywords = ['vandalism', 'spam', 'attack', 'hack', 'security'];
     const hasSensitiveContent = sensitiveKeywords.some(keyword => 
       comment.includes(keyword) || wikiEvent.title.toLowerCase().includes(keyword)
@@ -160,15 +160,15 @@ export class WikimediaIngestorService implements OnModuleInit {
       return 'critical';
     }
 
-    // 检查是否是大规模编辑
+    // Check if it's a mass edit
     if (wikiEvent.length && wikiEvent.length.old && wikiEvent.length.new) {
       const changeSize = Math.abs(wikiEvent.length.new - wikiEvent.length.old);
-      if (changeSize > 10000) { // 超过10KB的变化
+      if (changeSize > 10000) { // Changes exceeding 10KB
         return 'high';
       }
     }
 
-    // 检查是否是重要页面
+    // Check if it's an important page
     const importantPages = ['main page', 'homepage', 'index'];
     if (importantPages.some(page => wikiEvent.title.toLowerCase().includes(page))) {
       return 'medium';
@@ -186,7 +186,7 @@ export class WikimediaIngestorService implements OnModuleInit {
     if (wikiEvent.type === 'edit') tags.push('edit-page');
     if (wikiEvent.type === 'log') tags.push('log-entry');
     
-    // 添加命名空间标签
+    // Add namespace tags
     if (wikiEvent.namespace === 0) tags.push('main-namespace');
     if (wikiEvent.namespace === 1) tags.push('talk-namespace');
     if (wikiEvent.namespace === 2) tags.push('user-namespace');
@@ -206,8 +206,8 @@ export class WikimediaIngestorService implements OnModuleInit {
 
   private async createIncidentFromEvent(event: EventDocument) {
     try {
-      // 这里可以调用事件处理服务来创建事件
-      // 暂时简单记录
+      // Here we can call the event processing service to create events
+      // For now, just log simply
       this.logger.warn(`High severity Wikimedia event detected: ${event.summary}`);
     } catch (error) {
       this.logger.error('Error creating incident from Wikimedia event:', error);

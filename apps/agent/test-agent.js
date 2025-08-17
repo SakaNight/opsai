@@ -6,31 +6,31 @@ async function testAgentService() {
   console.log('🧪 Testing OpsAI Agent Service...\n');
 
   try {
-    // 1. 测试健康检查
-    console.log('1️⃣ Testing health check...');
+      // 1. Test health check
+  console.log('1️⃣ Testing health check...');
     const healthResponse = await axios.get(`${AGENT_URL}/health`);
     console.log('✅ Health check passed:', healthResponse.data);
     console.log('');
 
-    // 2. 测试服务信息
+    // 2. Test service info
     console.log('2️⃣ Testing service info...');
     const infoResponse = await axios.get(`${AGENT_URL}/`);
     console.log('✅ Service info retrieved:', infoResponse.data.service);
     console.log('');
 
-    // 3. 测试知识库连接验证
+    // 3. Test knowledge base connection
     console.log('3️⃣ Testing knowledge base connection...');
     const knowledgeResponse = await axios.get(`${AGENT_URL}/api/v1/knowledge/validate`);
     console.log('✅ Knowledge validation:', knowledgeResponse.data);
     console.log('');
 
-    // 4. 测试知识库统计
+    // 4. Test knowledge base statistics
     console.log('4️⃣ Testing knowledge stats...');
     const statsResponse = await axios.get(`${AGENT_URL}/api/v1/knowledge/stats`);
     console.log('✅ Knowledge stats:', statsResponse.data);
     console.log('');
 
-    // 5. 测试知识搜索
+    // 5. Test knowledge search
     console.log('5️⃣ Testing knowledge search...');
     const searchResponse = await axios.post(`${AGENT_URL}/api/v1/knowledge/search`, {
       query: 'database connection timeout',
@@ -40,7 +40,7 @@ async function testAgentService() {
     console.log('✅ Knowledge search:', searchResponse.data);
     console.log('');
 
-    // 6. 测试工作流执行（模拟）
+    // 6. Test workflow execution (simulation)
     console.log('6️⃣ Testing workflow execution...');
     const workflowResponse = await axios.post(`${AGENT_URL}/api/v1/workflow/execute`, {
       eventId: 'test_incident_001',
@@ -68,7 +68,7 @@ async function testAgentService() {
   }
 }
 
-// 检查服务是否启动
+// Check if service is started
 async function waitForService() {
   console.log('⏳ Waiting for Agent service to start...');
   
@@ -89,7 +89,7 @@ async function waitForService() {
   return false;
 }
 
-// 主函数
+// Main function
 async function main() {
   const serviceReady = await waitForService();
   
@@ -101,7 +101,7 @@ async function main() {
   }
 }
 
-// 运行测试
+// Run test
 if (require.main === module) {
   main().catch(console.error);
 }

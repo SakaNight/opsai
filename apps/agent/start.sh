@@ -4,7 +4,7 @@
 
 echo "🚀 Starting OpsAI Agent Service..."
 
-# 检查Node.js版本
+# Check Node.js version
 if ! command -v node &> /dev/null; then
     echo "❌ Node.js is not installed. Please install Node.js 20+ first."
     exit 1
@@ -18,7 +18,7 @@ fi
 
 echo "✅ Node.js version: $(node -v)"
 
-# 检查依赖是否安装
+# Check if dependencies are installed
 if [ ! -d "node_modules" ]; then
     echo "📦 Installing dependencies..."
     pnpm install
@@ -28,7 +28,7 @@ if [ ! -d "node_modules" ]; then
     fi
 fi
 
-# 检查环境变量文件
+# Check environment variables file
 if [ ! -f ".env" ]; then
     echo "⚠️  .env file not found. Creating from template..."
     cat > .env << EOF
@@ -72,13 +72,13 @@ EOF
     exit 1
 fi
 
-# 检查OpenAI API Key
+# Check OpenAI API Key
 if grep -q "your_openai_api_key_here" .env; then
     echo "❌ Please set your OpenAI API key in the .env file"
     exit 1
 fi
 
-# 启动服务
+# Start service
 echo "🚀 Starting Agent service in development mode..."
 echo "📊 Service will be available at: http://localhost:3003"
 echo "🔍 Health check: http://localhost:3003/health"

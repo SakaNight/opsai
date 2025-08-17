@@ -34,7 +34,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 确保默认集合存在
+   * Ensure default collection exists
    */
   private async ensureDefaultCollections() {
     try {
@@ -51,7 +51,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 创建集合（如果不存在）
+   * Create collection (if it doesn't exist)
    */
   async createCollectionIfNotExists(name: string, vectorSize: number): Promise<void> {
     try {
@@ -67,7 +67,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 检查集合是否存在
+   * Check if collection exists
    */
   async collectionExists(name: string): Promise<boolean> {
     try {
@@ -82,7 +82,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 创建新集合
+   * Create new collection
    */
   async createCollection(name: string, vectorSize: number): Promise<void> {
     const payload = {
@@ -100,7 +100,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 删除集合
+   * Delete collection
    */
   async deleteCollection(name: string): Promise<void> {
     await this.client.delete(`/collections/${name}`);
@@ -108,7 +108,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 获取集合信息
+   * Get collection information
    */
   async getCollectionInfo(name: string): Promise<CollectionInfo> {
     const response = await this.client.get(`/collections/${name}`);
@@ -116,7 +116,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 列出所有集合
+   * List all collections
    */
   async listCollections(): Promise<string[]> {
     const response = await this.client.get('/collections');
@@ -124,7 +124,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 插入向量点
+   * Insert vector points
    */
   async upsertPoints(collectionName: string, points: VectorPoint[]): Promise<void> {
     const payload = {
@@ -140,7 +140,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 搜索相似向量
+   * Search similar vectors
    */
   async searchSimilar(
     collectionName: string,
@@ -150,19 +150,19 @@ export class QdrantService implements OnModuleInit {
     filters?: any
   ): Promise<Array<{ id: number; score: number; payload: Record<string, any> }>> {
     try {
-      // 确保向量维度正确
+      // Ensure vector dimensions are correct
       if (vector.length !== 1536) {
         throw new Error(`Vector dimension mismatch: expected 1536, got ${vector.length}`);
       }
 
       const payload: any = {
         vector,
-        limit: Math.max(1, Math.min(100, limit)), // 限制范围1-100
-        score_threshold: Math.max(0, Math.min(1, scoreThreshold)), // 限制范围0-1
+        limit: Math.max(1, Math.min(100, limit)), // Limit range 1-100
+        score_threshold: Math.max(0, Math.min(1, scoreThreshold)), // Limit range 0-1
         with_payload: true,
       };
 
-      // 添加过滤器
+      // Add filters
       if (filters) {
         payload.filter = filters;
       }
@@ -188,7 +188,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 删除向量点
+   * Delete vector points
    */
   async deletePoints(collectionName: string, pointIds: string[]): Promise<void> {
     const payload = {
@@ -200,7 +200,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 获取集合统计信息
+   * Get collection statistics
    */
   async getCollectionStats(name: string): Promise<any> {
     const response = await this.client.get(`/collections/${name}`);
@@ -208,7 +208,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 健康检查
+   * Health check
    */
   async healthCheck(): Promise<boolean> {
     try {
@@ -221,7 +221,7 @@ export class QdrantService implements OnModuleInit {
   }
 
   /**
-   * 获取服务状态
+   * Get service status
    */
   getStatus() {
     return {

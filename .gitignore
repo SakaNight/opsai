@@ -50,6 +50,8 @@ coverage/
 *.tmp
 
 # Documentation files (sensitive or large)
+docs/
+docs/*
 docs/*.md
 docs/images/
 docs/*.pdf
@@ -62,8 +64,8 @@ docs/*.docx
 
 # Specific sensitive docs to ignore
 docs/OpsAI_Project_Record_*.md
-docs/ops_ai_realtime_incident_knowledge_copilot_项目规划与执行手册（生产级_mvp）.md
-docs/OpsAI项目概述.docx
+docs/ops_ai_realtime_incident_knowledge_copilot_project_planning_and_execution_manual_production_mvp.md
+docs/OpsAI_Project_Overview.docx
 
 # Local development
 .local/

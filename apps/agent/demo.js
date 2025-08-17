@@ -1,22 +1,22 @@
-// 加载环境变量
+// Load environment variables
 require('dotenv').config();
 
 const { SimpleAgentService } = require('./dist/services/agent.service.simple');
 const { KnowledgeService } = require('./dist/services/knowledge.service');
 
-// 演示脚本：展示MVP3 Agent服务的核心功能
+// Demo script: Showcase MVP3 Agent service core functionality
 async function demonstrateMVP3() {
   console.log('🎯 OpsAI MVP3 Demo: AI Agent & Automation\n');
   console.log('=' .repeat(60));
 
   try {
-    // 1. 初始化服务
+    // 1. Initialize services
     console.log('1️⃣ Initializing services...');
     const agentService = new SimpleAgentService();
     const knowledgeService = new KnowledgeService();
     console.log('✅ Services initialized successfully\n');
 
-    // 2. 模拟事件数据
+    // 2. Simulate event data
     console.log('2️⃣ Simulating incident event...');
     const testEvent = {
       eventId: 'demo_incident_001',
@@ -33,7 +33,7 @@ async function demonstrateMVP3() {
     console.log('📊 Event Data:', JSON.stringify(testEvent, null, 2));
     console.log('');
 
-    // 3. 执行AI工作流
+    // 3. Execute AI workflow
     console.log('3️⃣ Executing AI workflow...');
     console.log('🔄 Workflow: Event → Analysis → Root Cause → Suggestions → Response');
     console.log('⏳ Processing...');
@@ -48,7 +48,7 @@ async function demonstrateMVP3() {
     console.log('📊 Status:', workflow.status);
     console.log('');
 
-    // 4. 展示工作流结果
+    // 4. Display workflow results
     console.log('4️⃣ Workflow Results:');
     console.log('-' .repeat(40));
     
@@ -92,7 +92,7 @@ async function demonstrateMVP3() {
       console.log('');
     }
 
-    // 5. 知识库集成演示
+    // 5. Knowledge base integration demo
     console.log('5️⃣ Knowledge Base Integration:');
     console.log('🔍 Searching for related knowledge...');
     
@@ -118,7 +118,7 @@ async function demonstrateMVP3() {
     
     console.log('');
 
-    // 6. 总结
+    // 6. Summary
     console.log('6️⃣ MVP3 Summary:');
     console.log('🎉 Successfully demonstrated:');
     console.log('   ✅ LangChain/LangGraph integration');
@@ -149,7 +149,7 @@ async function demonstrateMVP3() {
   }
 }
 
-// 运行演示
+// Run demo
 if (require.main === module) {
   console.log('⚠️  Note: This demo requires:');
   console.log('   - OpenAI API key configured');
@@ -157,7 +157,7 @@ if (require.main === module) {
   console.log('   - Dependencies installed and built');
   console.log('');
   
-  // 检查是否已构建
+  // Check if already built
   try {
     require('./dist/services/agent.service');
     demonstrateMVP3().catch(console.error);

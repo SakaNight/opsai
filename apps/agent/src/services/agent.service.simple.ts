@@ -7,20 +7,20 @@ import {
   AgentWorkflow 
 } from '../schemas/agent.schema';
 
-// 简化版Agent服务类
+// Simplified Agent service class
 export class SimpleAgentService {
   private llm: ChatOpenAI;
 
   constructor() {
-    // 初始化OpenAI模型
+    // Initialize OpenAI model
     this.llm = new ChatOpenAI({
-      modelName: 'gpt-4o-mini', // 使用GPT-4o-mini，性价比更高
+      modelName: 'gpt-4o-mini', // Use GPT-4o-mini for better cost-effectiveness
       temperature: 0.1,
       maxTokens: 2000,
     });
   }
 
-  // 分析事件
+  // Analyze event
   async analyzeEvent(eventId: string, eventData: any): Promise<EventAnalysis> {
     try {
       console.log(`[Agent] Analyzing event: ${eventId}`);
@@ -42,7 +42,7 @@ export class SimpleAgentService {
       const response = await this.llm.invoke([{ role: 'user', content: prompt }]);
       const content = response.content as string;
       
-      // 解析响应（简化版本）
+      // Parse response (simplified version)
       const analysis: EventAnalysis = {
         id: `analysis_${Date.now()}`,
         eventId,
@@ -62,7 +62,7 @@ export class SimpleAgentService {
     }
   }
 
-  // 分析根因
+  // Analyze root cause
   async analyzeRootCause(eventId: string, analysis: EventAnalysis): Promise<RootCauseAnalysis> {
     try {
       console.log(`[Agent] Analyzing root cause for event: ${eventId}`);
@@ -105,7 +105,7 @@ export class SimpleAgentService {
     }
   }
 
-  // 生成解决建议
+  // Generate resolution suggestions
   async generateSuggestions(eventId: string, analysis: EventAnalysis, rootCause: RootCauseAnalysis): Promise<ResolutionSuggestion> {
     try {
       console.log(`[Agent] Generating suggestions for event: ${eventId}`);
@@ -153,7 +153,7 @@ export class SimpleAgentService {
     }
   }
 
-  // 创建自动化响应
+  // Create automated response
   async createResponse(eventId: string, analysis: EventAnalysis, suggestions: ResolutionSuggestion): Promise<AutomatedResponse> {
     try {
       console.log(`[Agent] Creating automated response for event: ${eventId}`);
@@ -194,21 +194,21 @@ export class SimpleAgentService {
     }
   }
 
-  // 执行完整工作流
+  // Execute complete workflow
   async executeWorkflow(eventId: string, eventData: any): Promise<AgentWorkflow> {
     console.log(`[Agent] Starting workflow for event: ${eventId}`);
     
     try {
-      // 1. 分析事件
+      // 1. Analyze event
       const analysis = await this.analyzeEvent(eventId, eventData);
       
-      // 2. 分析根因
+      // 2. Analyze root cause
       const rootCause = await this.analyzeRootCause(eventId, analysis);
       
-      // 3. 生成建议
+      // 3. Generate suggestions
       const suggestions = await this.generateSuggestions(eventId, analysis, rootCause);
       
-      // 4. 创建响应
+      // 4. Create response
       const automatedResponse = await this.createResponse(eventId, analysis, suggestions);
       
       const workflow: AgentWorkflow = {
@@ -277,13 +277,13 @@ export class SimpleAgentService {
     }
   }
 
-  // 获取工作流状态
+  // Get workflow status
   async getWorkflowStatus(workflowId: string): Promise<AgentWorkflow | null> {
     console.log(`[Agent] Getting workflow status: ${workflowId}`);
-    return null; // 简化版本，暂时不实现持久化
+    return null; // Simplified version, persistence not implemented yet
   }
 
-  // 停止工作流
+  // Stop workflow
   async stopWorkflow(workflowId: string): Promise<boolean> {
     console.log(`[Agent] Stopping workflow: ${workflowId}`);
     return true;

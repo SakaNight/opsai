@@ -5,29 +5,29 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { AgentController } from './controllers/agent.controller';
 
-// 加载环境变量
+// Load environment variables
 dotenv.config();
 
-// 创建Express应用
+// Create Express application
 const app: express.Application = express();
 const port = process.env.PORT || 3003;
 
-// 创建控制器实例
+// Create controller instance
 const agentController = new AgentController();
 
-// 中间件
-app.use(helmet()); // 安全头
-app.use(cors()); // CORS支持
-app.use(morgan('combined')); // 日志记录
-app.use(express.json({ limit: '10mb' })); // JSON解析
-app.use(express.urlencoded({ extended: true })); // URL编码
+// Middleware
+app.use(helmet()); // Security headers
+app.use(cors()); // CORS support
+app.use(morgan('combined')); // Logging
+app.use(express.json({ limit: '10mb' })); // JSON parsing
+app.use(express.urlencoded({ extended: true })); // URL encoding
 
-// 健康检查路由
+// Health check route
 app.get('/health', (req, res) => {
   agentController.healthCheck(req, res);
 });
 
-// API路由
+// API routes
 app.post('/api/v1/workflow/execute', (req, res) => {
   agentController.executeWorkflow(req, res);
 });
@@ -52,7 +52,7 @@ app.get('/api/v1/knowledge/validate', (req, res) => {
   agentController.validateKnowledgeConnection(req, res);
 });
 
-// 根路径
+// Root path
 app.get('/', (req, res) => {
   res.json({
     service: 'OpsAI Agent Service',
@@ -74,7 +74,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// 404处理
+// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -83,7 +83,7 @@ app.use('*', (req, res) => {
   });
 });
 
-// 错误处理中间件
+// Error handling middleware
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('[Server] Unhandled error:', error);
   
@@ -94,13 +94,13 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
   });
 });
 
-// 启动服务器
+// Start server
 app.listen(port, () => {
   console.log(`🚀 OpsAI Agent Service started on port ${port}`);
   console.log(`📊 Health check: http://localhost:${port}/health`);
   console.log(`🔍 API docs: http://localhost:${port}/`);
   
-  // 验证环境变量
+  // Validate environment variables
   const requiredEnvVars = ['OPENAI_API_KEY'];
   const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
   
@@ -109,7 +109,7 @@ app.listen(port, () => {
     console.warn('Some features may not work properly without these variables.');
   }
   
-  // 验证知识库连接
+  // Validate knowledge base connection
   setTimeout(async () => {
     try {
       const controller = new AgentController();
@@ -128,7 +128,7 @@ app.listen(port, () => {
   }, 1000);
 });
 
-// 优雅关闭
+// Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
   process.exit(0);

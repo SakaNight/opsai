@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// 事件分析结果
+// Event analysis result
 export const EventAnalysisSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -14,7 +14,7 @@ export const EventAnalysisSchema = z.object({
   metadata: z.record(z.any()).optional(),
 });
 
-// 根因分析
+// Root cause analysis
 export const RootCauseAnalysisSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -31,7 +31,7 @@ export const RootCauseAnalysisSchema = z.object({
   metadata: z.record(z.any()).optional(),
 });
 
-// 解决建议
+// Resolution suggestions
 export const ResolutionSuggestionSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -42,7 +42,7 @@ export const ResolutionSuggestionSchema = z.object({
     description: z.string(),
     steps: z.array(z.string()),
     priority: z.enum(['low', 'medium', 'high', 'urgent']),
-    estimatedTime: z.number(), // 分钟
+    estimatedTime: z.number(), // minutes
     requiredSkills: z.array(z.string()),
     riskLevel: z.enum(['low', 'medium', 'high']),
     references: z.array(z.string()),
@@ -51,7 +51,7 @@ export const ResolutionSuggestionSchema = z.object({
   metadata: z.record(z.any()).optional(),
 });
 
-// 自动化响应
+// Automated response
 export const AutomatedResponseSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -64,7 +64,7 @@ export const AutomatedResponseSchema = z.object({
   metadata: z.record(z.any()).optional(),
 });
 
-// Agent工作流状态
+// Agent workflow status
 export const AgentWorkflowSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -88,7 +88,7 @@ export const AgentWorkflowSchema = z.object({
   metadata: z.record(z.any()).optional(),
 });
 
-// 知识检索结果
+// Knowledge retrieval result
 export const KnowledgeRetrievalSchema = z.object({
   query: z.string(),
   results: z.array(z.object({
@@ -104,7 +104,7 @@ export const KnowledgeRetrievalSchema = z.object({
   metadata: z.record(z.any()).optional(),
 });
 
-// 导出类型
+// Export types
 export type EventAnalysis = z.infer<typeof EventAnalysisSchema>;
 export type RootCauseAnalysis = z.infer<typeof RootCauseAnalysisSchema>;
 export type ResolutionSuggestion = z.infer<typeof ResolutionSuggestionSchema>;

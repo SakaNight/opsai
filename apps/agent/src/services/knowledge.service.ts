@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { KnowledgeRetrieval } from '../schemas/agent.schema';
 
-// 知识检索服务
+// Knowledge retrieval service
 export class KnowledgeService {
   private qdrantUrl: string;
   private qdrantApiKey: string;
@@ -11,7 +11,7 @@ export class KnowledgeService {
     this.qdrantApiKey = process.env.QDRANT_API_KEY || '';
   }
 
-  // 从向量数据库检索相关知识
+  // Retrieve relevant knowledge from vector database
   async searchKnowledge(
     query: string, 
     filters?: Record<string, any>, 
@@ -20,19 +20,19 @@ export class KnowledgeService {
     try {
       console.log(`[Knowledge] Searching for: "${query}"`);
       
-      // 构建搜索请求
+      // Build search request
       const searchRequest = {
         vector: await this.getQueryEmbedding(query),
         limit,
         with_payload: true,
         with_vectors: false,
-        score_threshold: 0.5,
+        score_threshold: 0.1, // Lower threshold for testing
         filter: this.buildSearchFilter(filters),
       };
 
-      // 调用Qdrant搜索API
+      // Call Qdrant search API
       const response = await axios.post(
-        `${this.qdrantUrl}/collections/opsai_knowledge/points/search`,
+        `${this.qdrantUrl}/collections/opsai-knowledge/points/search`,
         searchRequest,
         {
           headers: {
@@ -44,7 +44,7 @@ export class KnowledgeService {
 
       const results = response.data.result || [];
       
-      // 转换结果格式
+      // Transform result format
       const knowledgeResults = results.map((item: any) => ({
         id: item.id,
         title: item.payload?.title || 'Untitled',
@@ -67,7 +67,7 @@ export class KnowledgeService {
         metadata: {
           filters,
           limit,
-          scoreThreshold: 0.5,
+          scoreThreshold: 0.1,
         },
       };
     } catch (error) {
@@ -76,21 +76,21 @@ export class KnowledgeService {
     }
   }
 
-  // 获取查询的向量表示
+  // Get vector representation for query
   private async getQueryEmbedding(query: string): Promise<number[]> {
     try {
-      // 这里应该调用OpenAI的embedding API
-      // 简化版本，返回随机向量用于演示
+      // Here we should call OpenAI's embedding API
+      // Simplified version, returns random vectors for demonstration
       console.log(`[Knowledge] Getting embedding for query: "${query}"`);
       
-      // TODO: 实现真实的embedding调用
+      // TODO: Implement real embedding call
       // const response = await openai.embeddings.create({
       //   model: 'text-embedding-ada-002',
       //   input: query,
       // });
       // return response.data[0].embedding;
       
-      // 临时返回随机向量
+      // Temporarily return random vectors
       return Array.from({ length: 1536 }, () => Math.random() - 0.5);
     } catch (error) {
       console.error('[Knowledge] Embedding generation failed:', error);
@@ -98,7 +98,7 @@ export class KnowledgeService {
     }
   }
 
-  // 构建搜索过滤器
+  // Build search filter
   private buildSearchFilter(filters?: Record<string, any>): any {
     if (!filters || Object.keys(filters).length === 0) {
       return undefined;
@@ -143,26 +143,26 @@ export class KnowledgeService {
     };
   }
 
-  // 获取特定服务的知识
+  // Get knowledge for specific service
   async getServiceKnowledge(service: string, limit: number = 10): Promise<KnowledgeRetrieval> {
     return this.searchKnowledge('', { service }, limit);
   }
 
-  // 获取特定严重程度的知识
+  // Get knowledge for specific severity level
   async getSeverityKnowledge(severity: string, limit: number = 10): Promise<KnowledgeRetrieval> {
     return this.searchKnowledge('', { severity }, limit);
   }
 
-  // 获取相关标签的知识
+  // Get knowledge for specific tags
   async getTaggedKnowledge(tags: string[], limit: number = 10): Promise<KnowledgeRetrieval> {
     return this.searchKnowledge('', { tags }, limit);
   }
 
-  // 获取知识统计信息
+  // Get knowledge statistics
   async getKnowledgeStats(): Promise<Record<string, any>> {
     try {
       const response = await axios.get(
-        `${this.qdrantUrl}/collections/opsai_knowledge`,
+        `${this.qdrantUrl}/collections/opsai-knowledge`,
         {
           headers: {
             ...(this.qdrantApiKey && { 'api-key': this.qdrantApiKey }),
@@ -186,7 +186,7 @@ export class KnowledgeService {
     }
   }
 
-  // 验证知识库连接
+  // Validate knowledge base connection
   async validateConnection(): Promise<boolean> {
     try {
       const response = await axios.get(
@@ -199,7 +199,7 @@ export class KnowledgeService {
       );
       
       const collections = response.data.result?.collections || [];
-      const hasKnowledgeCollection = collections.some((col: any) => col.name === 'opsai_knowledge');
+      const hasKnowledgeCollection = collections.some((col: any) => col.name === 'opsai-knowledge');
       
       console.log(`[Knowledge] Connection validated. Found ${collections.length} collections.`);
       return hasKnowledgeCollection;

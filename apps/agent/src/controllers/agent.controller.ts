@@ -3,7 +3,7 @@ import { SimpleAgentService } from '../services/agent.service.simple';
 import { KnowledgeService } from '../services/knowledge.service';
 import { z } from 'zod';
 
-// 请求验证模式
+// Request validation schema
 const ExecuteWorkflowSchema = z.object({
   eventId: z.string(),
   eventData: z.record(z.any()),
@@ -15,7 +15,7 @@ const SearchKnowledgeSchema = z.object({
   limit: z.number().min(1).max(100).optional(),
 });
 
-// Agent控制器
+// Agent controller
 export class AgentController {
   private agentService: SimpleAgentService;
   private knowledgeService: KnowledgeService;
@@ -25,15 +25,15 @@ export class AgentController {
     this.knowledgeService = new KnowledgeService();
   }
 
-  // 执行工作流
+  // Execute workflow
   async executeWorkflow(req: Request, res: Response): Promise<void> {
     try {
-      // 验证请求数据
+      // Validate request data
       const validatedData = ExecuteWorkflowSchema.parse(req.body);
       
       console.log(`[Controller] Executing workflow for event: ${validatedData.eventId}`);
       
-      // 执行工作流
+      // Execute workflow
       const workflow = await this.agentService.executeWorkflow(
         validatedData.eventId,
         validatedData.eventData
@@ -63,7 +63,7 @@ export class AgentController {
     }
   }
 
-  // 获取工作流状态
+  // Get workflow status
   async getWorkflowStatus(req: Request, res: Response): Promise<void> {
     try {
       const { workflowId } = req.params;
@@ -104,7 +104,7 @@ export class AgentController {
     }
   }
 
-  // 停止工作流
+  // Stop workflow
   async stopWorkflow(req: Request, res: Response): Promise<void> {
     try {
       const { workflowId } = req.params;
@@ -143,15 +143,15 @@ export class AgentController {
     }
   }
 
-  // 搜索知识库
+  // Search knowledge base
   async searchKnowledge(req: Request, res: Response): Promise<void> {
     try {
-      // 验证请求数据
+      // Validate request data
       const validatedData = SearchKnowledgeSchema.parse(req.body);
       
       console.log(`[Controller] Searching knowledge: "${validatedData.query}"`);
       
-      // 搜索知识库
+      // Search knowledge base
       const results = await this.knowledgeService.searchKnowledge(
         validatedData.query,
         validatedData.filters,
@@ -182,7 +182,7 @@ export class AgentController {
     }
   }
 
-  // 获取知识库统计信息
+  // Get knowledge base statistics
   async getKnowledgeStats(req: Request, res: Response): Promise<void> {
     try {
       console.log('[Controller] Getting knowledge stats');
@@ -205,7 +205,7 @@ export class AgentController {
     }
   }
 
-  // 验证知识库连接
+  // Validate knowledge base connection
   async validateKnowledgeConnection(req: Request, res: Response): Promise<void> {
     try {
       console.log('[Controller] Validating knowledge connection');
@@ -229,10 +229,10 @@ export class AgentController {
     }
   }
 
-  // 健康检查
+  // Health check
   async healthCheck(req: Request, res: Response): Promise<void> {
     try {
-      // 检查知识库连接
+      // Check knowledge base connection
       const knowledgeConnected = await this.knowledgeService.validateConnection();
       
       const healthStatus = {

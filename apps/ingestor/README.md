@@ -165,6 +165,6 @@ grep "source.*wikimedia" logs/opsai-*.log
 
 ## 📚 Related Documentation
 
-- [Project Overview](../docs/ops_ai_realtime_incident_knowledge_copilot_项目规划与执行手册（生产级_mvp）.md)
+- [Project Overview](../docs/ops_ai_realtime_incident_knowledge_copilot_project_planning_and_execution_manual_production_mvp.md)
 - [API Service Documentation](../api/README.md)
 - [Infrastructure Configuration](../../infra/local/README.md)
