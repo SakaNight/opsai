@@ -242,13 +242,32 @@ export class DocumentProcessorService {
     scoreThreshold: number = 0.7
   ): Promise<Array<{ id: number; score: number; content: string; metadata: any }>> {
     try {
+      this.logger.debug(`Searching for query: "${query}" with limit: ${limit}, threshold: ${scoreThreshold}`);
+      
+      // 验证输入参数
+      if (!query || query.trim().length === 0) {
+        throw new Error('Search query cannot be empty');
+      }
+      
+      if (limit < 1 || limit > 100) {
+        throw new Error('Limit must be between 1 and 100');
+      }
+      
+      if (scoreThreshold < 0 || scoreThreshold > 1) {
+        throw new Error('Score threshold must be between 0 and 1');
+      }
+
       const queryVector = this.simpleHashVector(query);
+      this.logger.debug(`Generated query vector with dimension: ${queryVector.length}`);
+      
       const results = await this.qdrantService.searchSimilar(
         'opsai-knowledge',
         queryVector,
         limit,
         scoreThreshold
       );
+      
+      this.logger.debug(`Search returned ${results.length} results`);
       
       return results.map(result => ({
         id: result.id,

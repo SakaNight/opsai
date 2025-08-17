@@ -148,19 +148,37 @@ export class QdrantService implements OnModuleInit {
     limit: number = 10,
     scoreThreshold: number = 0.7
   ): Promise<Array<{ id: number; score: number; payload: Record<string, any> }>> {
-    const payload = {
-      vector,
-      limit,
-      score_threshold: scoreThreshold,
-      with_payload: true,
-    };
+    try {
+      // 确保向量维度正确
+      if (vector.length !== 1536) {
+        throw new Error(`Vector dimension mismatch: expected 1536, got ${vector.length}`);
+      }
 
-    const response = await this.client.post(`/collections/${collectionName}/points/search`, payload);
-    return response.data.result.map((item: any) => ({
-      id: item.id,
-      score: item.score,
-      payload: item.payload,
-    }));
+      const payload = {
+        vector,
+        limit: Math.max(1, Math.min(100, limit)), // 限制范围1-100
+        score_threshold: Math.max(0, Math.min(1, scoreThreshold)), // 限制范围0-1
+        with_payload: true,
+      };
+
+      this.logger.debug(`Searching in collection ${collectionName} with payload:`, payload);
+
+      const response = await this.client.post(`/collections/${collectionName}/points/search`, payload);
+      
+      if (!response.data.result) {
+        this.logger.warn('No search results returned from Qdrant');
+        return [];
+      }
+
+      return response.data.result.map((item: any) => ({
+        id: item.id,
+        score: item.score,
+        payload: item.payload,
+      }));
+    } catch (error) {
+      this.logger.error(`Search failed in collection ${collectionName}:`, error);
+      throw error;
+    }
   }
 
   /**
