@@ -11,21 +11,48 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
 
   constructor() {
     this.kafka = new Kafka({
-      clientId: 'opsai-ingestor',
+      clientId: process.env.KAFKA_CLIENT_ID || 'opsai-ingestor',
       brokers: (process.env.KAFKA_BROKERS || 'localhost:9092').split(','),
       retry: {
         initialRetryTime: 100,
         retries: 8,
+        factor: 2,
+        maxRetryTime: 30000,
       },
+      connectionTimeout: 30000,
+      authenticationTimeout: 30000,
+      requestTimeout: 30000,
     });
 
-    this.producer = this.kafka.producer();
-    this.consumer = this.kafka.consumer({ groupId: 'opsai-ingestor-group' });
+    this.producer = this.kafka.producer({
+      allowAutoTopicCreation: true,
+      transactionTimeout: 30000,
+      retry: {
+        initialRetryTime: 100,
+        retries: 8,
+        factor: 2,
+        maxRetryTime: 30000,
+      },
+    });
+    
+    this.consumer = this.kafka.consumer({ 
+      groupId: process.env.KAFKA_GROUP_ID || 'opsai-ingestor-group',
+      sessionTimeout: 30000,
+      heartbeatInterval: 3000,
+      rebalanceTimeout: 60000,
+    });
   }
 
   async onModuleInit() {
     try {
       await this.connect();
+      
+      // Wait a bit for Redpanda to be fully ready
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      // Initialize default topics
+      await this.initializeDefaultTopics();
+      
       this.logger.log('Kafka service initialized successfully');
     } catch (error) {
       this.logger.error('Failed to initialize Kafka service:', error);
@@ -136,6 +163,87 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error(`Failed to create topic ${topic}:`, error);
       throw error;
+    }
+  }
+
+  async ensureTopicExists(topic: string, partitions: number = 3, replicationFactor: number = 1): Promise<void> {
+    const maxRetries = 3;
+    let lastError: any;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const admin = this.kafka.admin();
+        await admin.connect();
+        
+        // Check if topic exists
+        const metadata = await admin.fetchTopicMetadata({ topics: [topic] });
+        
+        if (metadata.topics.length === 0) {
+          // Topic doesn't exist, create it
+          await admin.createTopics({
+            topics: [
+              {
+                topic,
+                numPartitions: partitions,
+                replicationFactor,
+              },
+            ],
+          });
+          this.logger.log(`Topic ${topic} created successfully`);
+        } else {
+          this.logger.log(`Topic ${topic} already exists`);
+        }
+
+        await admin.disconnect();
+        return; // Success, exit the retry loop
+        
+      } catch (error) {
+        lastError = error;
+        this.logger.warn(`Attempt ${attempt}/${maxRetries} failed to ensure topic ${topic} exists:`, error.message);
+        
+        if (attempt < maxRetries) {
+          // Wait before retrying (exponential backoff)
+          const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          this.logger.log(`Waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+    
+    // All retries failed
+    this.logger.error(`Failed to ensure topic ${topic} exists after ${maxRetries} attempts:`, lastError);
+    throw lastError;
+  }
+
+  async initializeDefaultTopics(): Promise<void> {
+    const defaultTopics = [
+      { name: 'opsai-events', partitions: 3, replication: 1 },
+      { name: 'opsai-incidents', partitions: 3, replication: 1 },
+      { name: 'opsai-knowledge', partitions: 3, replication: 1 },
+      { name: 'opsai-dlq', partitions: 1, replication: 1 },
+    ];
+
+    this.logger.log('Initializing default Kafka topics...');
+    
+    const results = await Promise.allSettled(
+      defaultTopics.map(async (topic) => {
+        try {
+          await this.ensureTopicExists(topic.name, topic.partitions, topic.replication);
+          return { name: topic.name, status: 'success' };
+        } catch (error) {
+          this.logger.error(`Failed to initialize topic ${topic.name}:`, error);
+          return { name: topic.name, status: 'failed', error: error.message };
+        }
+      })
+    );
+
+    const successful = results.filter(r => r.status === 'fulfilled' && r.value.status === 'success').length;
+    const failed = results.length - successful;
+    
+    this.logger.log(`Topic initialization completed: ${successful} successful, ${failed} failed`);
+    
+    if (failed > 0) {
+      this.logger.warn('Some topics failed to initialize. The service will continue but some functionality may be limited.');
     }
   }
 

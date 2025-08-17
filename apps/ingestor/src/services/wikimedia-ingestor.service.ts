@@ -124,7 +124,7 @@ export class WikimediaIngestorService implements OnModuleInit {
 
       // 发送到Kafka
       await this.kafkaService.sendMessage('opsai-events', {
-        eventId: savedEvent._id,
+        eventId: savedEvent._id.toString(),
         source: 'wikimedia',
         severity,
         timestamp: savedEvent.timestamp,
