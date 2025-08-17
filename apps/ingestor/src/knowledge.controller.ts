@@ -16,7 +16,7 @@ export interface SearchQuery {
   scoreThreshold?: number;
 }
 
-@Controller('api/v1/knowledge')
+@Controller('knowledge')
 export class KnowledgeController {
   constructor(
     private readonly documentProcessor: DocumentProcessorService,

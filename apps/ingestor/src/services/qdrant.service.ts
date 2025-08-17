@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 
 export interface VectorPoint {
-  id: string;
+  id: number;
   vector: number[];
   payload: Record<string, any>;
 }
@@ -147,7 +147,7 @@ export class QdrantService implements OnModuleInit {
     vector: number[],
     limit: number = 10,
     scoreThreshold: number = 0.7
-  ): Promise<Array<{ id: string; score: number; payload: Record<string, any> }>> {
+  ): Promise<Array<{ id: number; score: number; payload: Record<string, any> }>> {
     const payload = {
       vector,
       limit,
@@ -188,7 +188,7 @@ export class QdrantService implements OnModuleInit {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await this.client.get('/health');
+      const response = await this.client.get('/');
       return response.status === 200;
     } catch (error) {
       this.logger.error('Qdrant health check failed:', error);

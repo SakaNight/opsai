@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { QdrantService, VectorPoint } from './qdrant.service';
 
 export interface DocumentChunk {
-  id: string;
+  id: number;
   content: string;
   metadata: {
     source: string;
@@ -45,14 +45,22 @@ export class DocumentProcessorService {
     const startTime = Date.now();
     
     try {
-      // 1. 文本分块
-      const chunks = this.chunkText(content, metadata);
+      this.logger.log(`Starting document processing for source: ${metadata.source}`);
       
-      // 2. 向量化（这里使用简单的哈希向量，实际项目中应该使用 OpenAI 或其他 embedding 服务）
+      // 1. 文本分块
+      this.logger.log('Step 1: Text chunking...');
+      const chunks = this.chunkText(content, metadata);
+      this.logger.log(`Created ${chunks.length} chunks`);
+      
+      // 2. 向量化
+      this.logger.log('Step 2: Vectorization...');
       const vectorPoints = await this.vectorizeChunks(chunks);
+      this.logger.log(`Vectorized ${vectorPoints.length} chunks`);
       
       // 3. 存储到 Qdrant
+      this.logger.log('Step 3: Storing to Qdrant...');
       await this.qdrantService.upsertPoints('opsai-knowledge', vectorPoints);
+      this.logger.log('Successfully stored to Qdrant');
       
       const processingTime = Date.now() - startTime;
       
@@ -66,6 +74,13 @@ export class DocumentProcessorService {
       };
     } catch (error) {
       this.logger.error('Failed to process document:', error);
+      this.logger.error('Error stack:', error.stack);
+      this.logger.error('Error details:', {
+        contentLength: content?.length,
+        metadata,
+        errorName: error.name,
+        errorMessage: error.message
+      });
       throw error;
     }
   }
@@ -83,6 +98,22 @@ export class DocumentProcessorService {
     }
   ): DocumentChunk[] {
     const chunks: DocumentChunk[] = [];
+    
+    // 如果内容为空或太短，直接创建一个块
+    if (!content || content.trim().length === 0) {
+      chunks.push(this.createChunk('', 0, metadata));
+      chunks.forEach(chunk => chunk.metadata.totalChunks = 1);
+      return chunks;
+    }
+    
+    // 如果内容长度小于默认块大小，直接创建一个块
+    if (content.length <= this.defaultChunkSize) {
+      chunks.push(this.createChunk(content, 0, metadata));
+      chunks.forEach(chunk => chunk.metadata.totalChunks = 1);
+      return chunks;
+    }
+    
+    // 正常分块逻辑
     const words = content.split(/\s+/);
     let currentChunk = '';
     let chunkIndex = 0;
@@ -113,6 +144,11 @@ export class DocumentProcessorService {
       chunks.push(this.createChunk(currentChunk, chunkIndex, metadata));
     }
     
+    // 确保至少有一个块
+    if (chunks.length === 0) {
+      chunks.push(this.createChunk(content, 0, metadata));
+    }
+    
     // 更新总块数
     chunks.forEach(chunk => {
       chunk.metadata.totalChunks = chunks.length;
@@ -135,7 +171,7 @@ export class DocumentProcessorService {
     }
   ): DocumentChunk {
     return {
-      id: `${metadata.source}-${Date.now()}-${chunkIndex}`,
+      id: Date.now() + chunkIndex, // 使用纯数字ID，符合Qdrant要求
       content: content.trim(),
       metadata: {
         ...metadata,
@@ -204,7 +240,7 @@ export class DocumentProcessorService {
     query: string,
     limit: number = 10,
     scoreThreshold: number = 0.7
-  ): Promise<Array<{ id: string; score: number; content: string; metadata: any }>> {
+  ): Promise<Array<{ id: number; score: number; content: string; metadata: any }>> {
     try {
       const queryVector = this.simpleHashVector(query);
       const results = await this.qdrantService.searchSimilar(
