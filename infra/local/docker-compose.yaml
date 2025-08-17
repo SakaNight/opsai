@@ -1,20 +1,128 @@
+version: '3.8'
+
 services:
+  # MongoDB - Main Database
   mongo:
     image: mongo:6
     container_name: opsai_mongo
     ports: ["27017:27017"]
+    environment:
+      MONGO_INITDB_DATABASE: opsai
     volumes:
       - mongo_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - opsai-network
+
+  # Redis - Caching and Rate Limiting
   redis:
-    image: redis:7
+    image: redis:7-alpine
     container_name: opsai_redis
     ports: ["6379:6379"]
+    command: redis-server --requirepass opsai123
+    volumes:
+      - redis_data:/data
+    networks:
+      - opsai-network
+
+  # Qdrant - Vector Database
   qdrant:
     image: qdrant/qdrant:latest
     container_name: opsai_qdrant
     ports: ["6333:6333", "6334:6334"]
     volumes:
       - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    networks:
+      - opsai-network
+
+  # Redpanda - Event Stream Processing (Kafka Compatible)
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: opsai_redpanda
+    ports: 
+      - "9092:9092"   # Kafka API
+    command:
+      - redpanda
+      - start
+      - --mode dev-container
+      - --smp 1
+      - --memory 1G
+      - --overprovisioned
+      - --node-id 0
+      - --check=false
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    networks:
+      - opsai-network
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: opsai_prometheus
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - opsai-network
+
+  # Grafana - Monitoring Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: opsai_grafana
+    ports: ["3001:3000"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: opsai123
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - opsai-network
+
+  # Loki - Log Aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: opsai_loki
+    ports: ["3100:3100"]
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    networks:
+      - opsai-network
+
+  # Promtail - Log Collector
+  promtail:
+    image: grafana/promtail:latest
+    container_name: opsai_promtail
+    volumes:
+      - ./promtail-config.yaml:/etc/promtail/config.yml
+      - /var/log:/var/log
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - opsai-network
+
 volumes:
   mongo_data:
+  redis_data:
   qdrant_data:
+  redpanda_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
+networks:
+  opsai-network:
+    driver: bridge
