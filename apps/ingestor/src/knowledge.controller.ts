@@ -14,6 +14,11 @@ export interface SearchQuery {
   query: string;
   limit?: number;
   scoreThreshold?: number;
+  source?: string;
+  tags?: string;
+  startDate?: string;
+  endDate?: string;
+  metadata?: string;
 }
 
 @Controller('knowledge')
@@ -55,20 +60,137 @@ export class KnowledgeController {
   }
 
   /**
+   * 获取文档统计信息
+   */
+  @Get('documents/stats')
+  async getDocumentStats() {
+    try {
+      const stats = await this.documentProcessor.getDocumentStats();
+      return {
+        stats,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        error: 'Failed to get document stats',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  /**
+   * 删除文档
+   */
+  @Delete('documents/:id')
+  async deleteDocument(@Param('id') id: string) {
+    try {
+      await this.documentProcessor.deleteDocument(parseInt(id));
+      return {
+        message: `Document ${id} deleted successfully`,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        error: 'Failed to delete document',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  /**
+   * 高级搜索
+   */
+  @Post('search/advanced')
+  async advancedSearch(@Body() searchRequest: {
+    query: string;
+    limit?: number;
+    scoreThreshold?: number;
+    filters?: any;
+    sortBy?: 'relevance' | 'date' | 'source';
+    includeMetadata?: boolean;
+  }) {
+    try {
+      const results = await this.documentProcessor.advancedSearch(
+        searchRequest.query,
+        {
+          limit: searchRequest.limit,
+          scoreThreshold: searchRequest.scoreThreshold,
+          filters: searchRequest.filters,
+          sortBy: searchRequest.sortBy,
+          includeMetadata: searchRequest.includeMetadata,
+        }
+      );
+
+      return {
+        query: searchRequest.query,
+        results: results.results,
+        total: results.total,
+        searchTime: results.searchTime,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        error: 'Advanced search failed',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  /**
    * 搜索相似文档
    */
   @Get('search')
   async searchDocuments(@Query() searchQuery: SearchQuery) {
-    const { query, limit = 10, scoreThreshold = 0.7 } = searchQuery;
+    const { 
+      query, 
+      limit = 10, 
+      scoreThreshold = 0.7,
+      source,
+      tags,
+      startDate,
+      endDate,
+      metadata
+    } = searchQuery;
+    
+    // 构建过滤器
+    const filters: any = {};
+    
+    if (source) {
+      filters.source = source;
+    }
+    
+    if (tags) {
+      filters.tags = tags.split(',').map(tag => tag.trim());
+    }
+    
+    if (startDate || endDate) {
+      filters.dateRange = {};
+      if (startDate) {
+        filters.dateRange.start = new Date(startDate);
+      }
+      if (endDate) {
+        filters.dateRange.end = new Date(endDate);
+      }
+    }
+    
+    if (metadata) {
+      try {
+        filters.metadata = JSON.parse(metadata);
+      } catch (error) {
+        // 如果JSON解析失败，忽略metadata参数
+      }
+    }
     
     const results = await this.documentProcessor.searchSimilarDocuments(
       query,
       limit,
-      scoreThreshold
+      scoreThreshold,
+      Object.keys(filters).length > 0 ? filters : undefined
     );
 
     return {
       query,
+      filters: Object.keys(filters).length > 0 ? filters : undefined,
       results,
       total: results.length,
       timestamp: new Date().toISOString(),

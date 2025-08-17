@@ -197,17 +197,86 @@ export class DocumentProcessorService {
   }
 
   /**
-   * 简单的哈希向量化（用于测试，实际应使用 OpenAI embedding）
+   * 改进的哈希向量化（用于测试，实际应使用 OpenAI embedding）
    */
   private simpleHashVector(text: string): number[] {
     const vector = new Array(1536).fill(0);
     const words = text.toLowerCase().split(/\s+/);
     
-    words.forEach((word, index) => {
-      const hash = this.hashString(word);
-      const position = hash % 1536;
-      vector[position] = (vector[position] + 1) / (index + 1);
+    // 特征提取：词频、字符频率、位置信息
+    const wordFreq: { [key: string]: number } = {};
+    const charFreq: { [key: string]: number } = {};
+    
+    // 计算词频和字符频率
+    words.forEach(word => {
+      wordFreq[word] = (wordFreq[word] || 0) + 1;
+      for (const char of word) {
+        charFreq[char] = (charFreq[char] || 0) + 1;
+      }
     });
+    
+    // 生成向量
+    let vectorIndex = 0;
+    
+    // 1. 词频特征 (前256维)
+    for (const [word, freq] of Object.entries(wordFreq)) {
+      if (vectorIndex < 256) {
+        const hash = this.hashString(word);
+        vector[vectorIndex] = (freq / words.length) * ((hash % 1000) / 1000);
+        vectorIndex++;
+      }
+    }
+    
+    // 2. 字符频率特征 (256-512维)
+    for (const [char, freq] of Object.entries(charFreq)) {
+      if (vectorIndex < 512) {
+        const hash = this.hashString(char);
+        vector[vectorIndex] = (freq / text.length) * ((hash % 1000) / 1000);
+        vectorIndex++;
+      }
+    }
+    
+    // 3. 位置特征 (512-768维)
+    for (let i = 0; i < 256 && vectorIndex < 768; i++) {
+      if (i < words.length) {
+        const word = words[i];
+        const hash = this.hashString(word);
+        vector[vectorIndex] = (i / words.length) * ((hash % 1000) / 1000);
+        vectorIndex++;
+      }
+    }
+    
+    // 4. 语义特征 (768-1024维)
+    const semanticWords = ['ai', 'artificial', 'intelligence', 'machine', 'learning', 'automation', 'monitoring', 'system', 'data', 'analysis', '运维', '自动化', '监控', '系统', '数据', '分析'];
+    for (let i = 0; i < 256 && vectorIndex < 1024; i++) {
+      const semanticWord = semanticWords[i % semanticWords.length];
+      const hasWord = words.some(word => word.includes(semanticWord));
+      vector[vectorIndex] = hasWord ? 0.8 : 0.2;
+      vectorIndex++;
+    }
+    
+    // 5. 长度特征 (1024-1280维)
+    for (let i = 0; i < 256 && vectorIndex < 1280; i++) {
+      if (i < words.length) {
+        const word = words[i];
+        vector[vectorIndex] = Math.min(word.length / 20, 1.0); // 归一化单词长度
+        vectorIndex++;
+      }
+    }
+    
+    // 6. 随机特征 (1280-1536维)
+    for (let i = 0; i < 256 && vectorIndex < 1536; i++) {
+      const hash = this.hashString(text + i.toString());
+      vector[vectorIndex] = (hash % 1000) / 1000;
+      vectorIndex++;
+    }
+    
+    // 确保向量被完全填充
+    while (vectorIndex < 1536) {
+      const hash = this.hashString(text + vectorIndex.toString());
+      vector[vectorIndex] = (hash % 1000) / 1000;
+      vectorIndex++;
+    }
     
     // 归一化向量
     const magnitude = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
@@ -239,10 +308,16 @@ export class DocumentProcessorService {
   async searchSimilarDocuments(
     query: string,
     limit: number = 10,
-    scoreThreshold: number = 0.7
+    scoreThreshold: number = 0.7,
+    filters?: {
+      source?: string;
+      tags?: string[];
+      dateRange?: { start?: Date; end?: Date };
+      metadata?: Record<string, any>;
+    }
   ): Promise<Array<{ id: number; score: number; content: string; metadata: any }>> {
     try {
-      this.logger.debug(`Searching for query: "${query}" with limit: ${limit}, threshold: ${scoreThreshold}`);
+      this.logger.debug(`Searching for query: "${query}" with limit: ${limit}, threshold: ${scoreThreshold}, filters:`, filters);
       
       // 验证输入参数
       if (!query || query.trim().length === 0) {
@@ -260,16 +335,23 @@ export class DocumentProcessorService {
       const queryVector = this.simpleHashVector(query);
       this.logger.debug(`Generated query vector with dimension: ${queryVector.length}`);
       
+      // 构建搜索过滤器
+      const searchFilters = this.buildSearchFilters(filters);
+      
       const results = await this.qdrantService.searchSimilar(
         'opsai-knowledge',
         queryVector,
         limit,
-        scoreThreshold
+        scoreThreshold,
+        searchFilters
       );
       
       this.logger.debug(`Search returned ${results.length} results`);
       
-      return results.map(result => ({
+      // 应用后处理过滤器
+      const filteredResults = this.applyPostSearchFilters(results, filters);
+      
+      return filteredResults.map(result => ({
         id: result.id,
         score: result.score,
         content: result.payload.content,
@@ -277,6 +359,159 @@ export class DocumentProcessorService {
       }));
     } catch (error) {
       this.logger.error('Failed to search similar documents:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 构建搜索过滤器
+   */
+  private buildSearchFilters(filters?: {
+    source?: string;
+    tags?: string[];
+    dateRange?: { start?: Date; end?: Date };
+    metadata?: Record<string, any>;
+  }): any {
+    const qdrantFilters: any[] = [];
+    
+    if (filters?.source) {
+      qdrantFilters.push({
+        key: 'source',
+        match: { value: filters.source }
+      });
+    }
+    
+    if (filters?.tags && filters.tags.length > 0) {
+      qdrantFilters.push({
+        key: 'tags',
+        match: { any: filters.tags }
+      });
+    }
+    
+    if (filters?.dateRange?.start || filters?.dateRange?.end) {
+      const dateFilter: any = { key: 'timestamp' };
+      if (filters.dateRange.start) {
+        dateFilter.range = { ...dateFilter.range, gte: filters.dateRange.start.toISOString() };
+      }
+      if (filters.dateRange.end) {
+        dateFilter.range = { ...dateFilter.range, lte: filters.dateRange.end.toISOString() };
+      }
+      qdrantFilters.push(dateFilter);
+    }
+    
+    return qdrantFilters.length > 0 ? { must: qdrantFilters } : undefined;
+  }
+
+  /**
+   * 应用后搜索过滤器
+   */
+  private applyPostSearchFilters(
+    results: Array<{ id: number; score: number; payload: Record<string, any> }>,
+    filters?: {
+      source?: string;
+      tags?: string[];
+      dateRange?: { start?: Date; end?: Date };
+      metadata?: Record<string, any>;
+    }
+  ): Array<{ id: number; score: number; payload: Record<string, any> }> {
+    if (!filters) return results;
+    
+    return results.filter(result => {
+      // 应用元数据过滤器
+      if (filters.metadata) {
+        for (const [key, value] of Object.entries(filters.metadata)) {
+          if (result.payload[key] !== value) {
+            return false;
+          }
+        }
+      }
+      
+      return true;
+    });
+  }
+
+  /**
+   * 高级语义搜索
+   */
+  async advancedSearch(
+    query: string,
+    options: {
+      limit?: number;
+      scoreThreshold?: number;
+      filters?: any;
+      sortBy?: 'relevance' | 'date' | 'source';
+      includeMetadata?: boolean;
+    } = {}
+  ): Promise<{
+    results: Array<{ id: number; score: number; content: string; metadata: any }>;
+    total: number;
+    searchTime: number;
+    queryVector: number[];
+  }> {
+    const startTime = Date.now();
+    
+    try {
+      const {
+        limit = 10,
+        scoreThreshold = 0.5,
+        filters,
+        sortBy = 'relevance',
+        includeMetadata = true
+      } = options;
+
+      this.logger.debug(`Advanced search for query: "${query}" with options:`, options);
+
+      // 生成查询向量
+      const queryVector = this.simpleHashVector(query);
+      
+      // 执行搜索
+      const results = await this.qdrantService.searchSimilar(
+        'opsai-knowledge',
+        queryVector,
+        limit * 2, // 获取更多结果用于排序
+        scoreThreshold,
+        filters
+      );
+
+      // 应用后处理过滤器
+      let filteredResults = this.applyPostSearchFilters(results, filters);
+
+      // 根据排序选项排序结果
+      if (sortBy === 'date') {
+        filteredResults.sort((a, b) => {
+          const dateA = new Date(a.payload.timestamp || 0);
+          const dateB = new Date(b.payload.timestamp || 0);
+          return dateB.getTime() - dateA.getTime();
+        });
+      } else if (sortBy === 'source') {
+        filteredResults.sort((a, b) => {
+          const sourceA = a.payload.source || '';
+          const sourceB = b.payload.source || '';
+          return sourceA.localeCompare(sourceB);
+        });
+      }
+      // relevance 排序保持Qdrant的相似度排序
+
+      // 限制结果数量
+      const finalResults = filteredResults.slice(0, limit);
+
+      const searchTime = Date.now() - startTime;
+
+      this.logger.debug(`Advanced search completed in ${searchTime}ms, returned ${finalResults.length} results`);
+
+      return {
+        results: finalResults.map(result => ({
+          id: result.id,
+          score: result.score,
+          content: result.payload.content,
+          metadata: includeMetadata ? result.payload : undefined,
+        })),
+        total: finalResults.length,
+        searchTime,
+        queryVector,
+      };
+    } catch (error) {
+      this.logger.error('Advanced search failed:', error);
       throw error;
     }
   }
@@ -318,6 +553,38 @@ export class DocumentProcessorService {
       return stats;
     } catch (error) {
       this.logger.error('Failed to get knowledge base stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取文档统计信息
+   */
+  async getDocumentStats(): Promise<any> {
+    try {
+      const collectionStats = await this.qdrantService.getCollectionStats('opsai-knowledge');
+      
+      return {
+        totalDocuments: collectionStats.points_count || 0,
+        collectionStatus: collectionStats.status || 'unknown',
+        vectorDimensions: 1536,
+        lastUpdated: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error('Failed to get document stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 删除文档
+   */
+  async deleteDocument(documentId: number): Promise<void> {
+    try {
+      await this.qdrantService.deletePoints('opsai-knowledge', [documentId.toString()]);
+      this.logger.debug(`Document ${documentId} deleted successfully`);
+    } catch (error) {
+      this.logger.error(`Failed to delete document ${documentId}:`, error);
       throw error;
     }
   }

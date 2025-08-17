@@ -146,7 +146,8 @@ export class QdrantService implements OnModuleInit {
     collectionName: string,
     vector: number[],
     limit: number = 10,
-    scoreThreshold: number = 0.7
+    scoreThreshold: number = 0.7,
+    filters?: any
   ): Promise<Array<{ id: number; score: number; payload: Record<string, any> }>> {
     try {
       // 确保向量维度正确
@@ -154,12 +155,17 @@ export class QdrantService implements OnModuleInit {
         throw new Error(`Vector dimension mismatch: expected 1536, got ${vector.length}`);
       }
 
-      const payload = {
+      const payload: any = {
         vector,
         limit: Math.max(1, Math.min(100, limit)), // 限制范围1-100
         score_threshold: Math.max(0, Math.min(1, scoreThreshold)), // 限制范围0-1
         with_payload: true,
       };
+
+      // 添加过滤器
+      if (filters) {
+        payload.filter = filters;
+      }
 
       this.logger.debug(`Searching in collection ${collectionName} with payload:`, payload);
 
