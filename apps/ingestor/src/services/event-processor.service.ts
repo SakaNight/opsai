@@ -42,7 +42,7 @@ export class EventProcessorService implements OnModuleInit {
 
   private async processEvents() {
     try {
-      // 获取待处理的事件
+      // Get pending events
       const pendingEvents = await this.eventModel
         .find({ status: 'pending' })
         .sort({ timestamp: 1 })
@@ -61,7 +61,7 @@ export class EventProcessorService implements OnModuleInit {
         } catch (error) {
           this.logger.error(`Error processing event ${event._id}:`, error);
           
-          // 标记事件为失败
+          // Mark event as failed
           event.status = 'failed';
           event.processingError = error.message;
           await event.save();
@@ -76,19 +76,19 @@ export class EventProcessorService implements OnModuleInit {
     try {
       this.logger.debug(`Processing event: ${event._id} from ${event.source}`);
 
-      // 分析事件并确定是否需要创建事件
+      // Analyze event and determine if incident should be created
       const incidentData = await this.analyzeEventForIncident(event);
       
       if (incidentData) {
         await this.createIncident(event, incidentData);
       }
 
-      // 标记事件为已处理
+      // Mark event as processed
       event.status = 'processed';
       event.processedAt = new Date();
       await event.save();
 
-      // 记录处理完成
+      // Log processing completion
       await this.loggingService.logEvent(
         event.source,
         event.type,
@@ -105,9 +105,9 @@ export class EventProcessorService implements OnModuleInit {
   }
 
   private async analyzeEventForIncident(event: EventDocument): Promise<any | null> {
-    // 基于事件严重性和内容分析是否需要创建事件
+    // Analyze if incident should be created based on event severity and content
     if (event.severity === 'low') {
-      return null; // 低严重性事件不创建事件
+      return null; // Low severity events don't create incidents
     }
 
     const analysis = {
@@ -120,24 +120,24 @@ export class EventProcessorService implements OnModuleInit {
       runbook: [],
     };
 
-    // 分析Wikimedia事件
+    // Analyze Wikimedia events
     if (event.source === 'wikimedia') {
       return this.analyzeWikimediaEvent(event, analysis);
     }
 
-    // 分析GitHub事件
+    // Analyze GitHub events
     if (event.source === 'github') {
       return this.analyzeGitHubEvent(event, analysis);
     }
 
-    // 通用分析逻辑
+    // Generic analysis logic
     return this.analyzeGenericEvent(event, analysis);
   }
 
   private analyzeWikimediaEvent(event: EventDocument, analysis: any): any | null {
     const raw = event.raw;
     
-    // 检查是否有敏感内容
+    // Check for sensitive content
     if (event.severity === 'critical') {
       analysis.shouldCreateIncident = true;
       analysis.incidentType = 'content_security';
@@ -153,10 +153,10 @@ export class EventProcessorService implements OnModuleInit {
       return analysis;
     }
 
-    // 检查大规模编辑
+    // Check for mass edits
     if (event.severity === 'high' && raw.length) {
       const changeSize = Math.abs(raw.length.new - raw.length.old);
-      if (changeSize > 50000) { // 50KB以上的变化
+      if (changeSize > 50000) { // Changes above 50KB
         analysis.shouldCreateIncident = true;
         analysis.incidentType = 'mass_content_change';
         analysis.affectedServices = ['wikipedia'];
@@ -178,7 +178,7 @@ export class EventProcessorService implements OnModuleInit {
   private analyzeGitHubEvent(event: EventDocument, analysis: any): any | null {
     const raw = event.raw;
     
-    // 安全相关事件
+    // Security-related events
     if (event.severity === 'critical' || event.severity === 'high') {
       analysis.shouldCreateIncident = true;
       analysis.incidentType = 'security_alert';
@@ -195,7 +195,7 @@ export class EventProcessorService implements OnModuleInit {
       return analysis;
     }
 
-    // 代码质量问题
+    // Code quality issues
     if (event.type === 'CodeScanningAlertEvent' && event.severity === 'medium') {
       analysis.shouldCreateIncident = true;
       analysis.incidentType = 'code_quality';
@@ -215,7 +215,7 @@ export class EventProcessorService implements OnModuleInit {
   }
 
   private analyzeGenericEvent(event: EventDocument, analysis: any): any | null {
-    // 通用事件分析逻辑
+    // Generic event analysis logic
     if (event.severity === 'critical') {
       analysis.shouldCreateIncident = true;
       analysis.incidentType = 'critical_event';
@@ -261,7 +261,7 @@ export class EventProcessorService implements OnModuleInit {
       event.incidentId = savedIncident._id as any;
       await event.save();
 
-      // 发送事件创建通知到Kafka
+      // Send incident creation notification to Kafka
       await this.kafkaService.sendMessage('opsai-incidents', {
         incidentId: savedIncident._id,
         title: savedIncident.title,

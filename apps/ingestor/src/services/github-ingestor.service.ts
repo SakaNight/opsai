@@ -48,13 +48,13 @@ export class GitHubIngestorService implements OnModuleInit {
         'User-Agent': 'OpsAI-Ingestor/1.0.0',
       };
 
-      // 添加认证token（如果有）
+      // Add authentication token (if available)
       const token = process.env.GITHUB_TOKEN;
       if (token) {
         headers['Authorization'] = `token ${token}`;
       }
 
-      // 添加ETag支持
+      // Add ETag support
       if (this.lastEtag) {
         headers['If-None-Match'] = this.lastEtag;
       }
@@ -65,13 +65,13 @@ export class GitHubIngestorService implements OnModuleInit {
         validateStatus: (status) => status < 400,
       });
 
-      // 检查是否有新内容
+      // Check if there's new content
       if (response.status === 304) {
         this.logger.debug('No new GitHub events');
         return;
       }
 
-      // 保存ETag
+      // Save ETag
       const etag = response.headers.etag;
       if (etag) {
         this.lastEtag = etag;
@@ -80,7 +80,7 @@ export class GitHubIngestorService implements OnModuleInit {
       const events = response.data;
       this.logger.log(`Fetched ${events.length} GitHub events`);
 
-      // 处理事件
+      // Process events
       for (const githubEvent of events) {
         await this.processGitHubEvent(githubEvent);
       }
@@ -102,10 +102,10 @@ export class GitHubIngestorService implements OnModuleInit {
 
   private async processGitHubEvent(githubEvent: any) {
     try {
-      // 分析事件严重性
-      const severity = this.analyzeGitHubSeverity(githubEvent);
+          // Analyze event severity
+    const severity = this.analyzeGitHubSeverity(githubEvent);
       
-      // 创建事件记录
+      // Create event record
       const event = new this.eventModel({
         source: 'github',
         type: githubEvent.type,
@@ -124,11 +124,11 @@ export class GitHubIngestorService implements OnModuleInit {
         },
       });
 
-      // 保存到数据库
+      // Save to database
       const savedEvent = await event.save();
       this.logger.debug(`Processed GitHub event: ${savedEvent._id}`);
 
-      // 发送到Kafka
+      // Send to Kafka
       await this.kafkaService.sendMessage('opsai-events', {
         eventId: savedEvent._id,
         source: 'github',
@@ -137,10 +137,10 @@ export class GitHubIngestorService implements OnModuleInit {
         summary: savedEvent.summary,
       });
 
-      // 记录日志
+      // Log event
       await this.loggingService.logEvent('github', githubEvent.type, severity, savedEvent._id.toString());
 
-      // 如果是高严重性事件，创建事件
+      // If it's a high severity event, create incident
       if (severity === 'high' || severity === 'critical') {
         await this.createIncidentFromEvent(savedEvent);
       }
@@ -154,12 +154,12 @@ export class GitHubIngestorService implements OnModuleInit {
     const eventType = githubEvent.type;
     const payload = githubEvent.payload || {};
     
-    // 检查安全相关事件
+    // Check security-related events
     if (eventType === 'SecurityAdvisoryEvent') {
       return 'critical';
     }
 
-    // 检查代码扫描警报
+    // Check code scanning alerts
     if (eventType === 'CodeScanningAlertEvent') {
       const severity = payload.alert?.rule?.security_severity;
       if (severity === 'critical' || severity === 'high') {
@@ -171,7 +171,7 @@ export class GitHubIngestorService implements OnModuleInit {
       return 'medium';
     }
 
-    // 检查依赖更新
+    // Check dependency updates
     if (eventType === 'DependabotAlertEvent') {
       const severity = payload.alert?.security_vulnerability?.severity;
       if (severity === 'critical' || severity === 'high') {
@@ -183,7 +183,7 @@ export class GitHubIngestorService implements OnModuleInit {
       return 'medium';
     }
 
-    // 检查推送事件
+    // Check push events
     if (eventType === 'PushEvent') {
       const commits = payload.commits || [];
       const hasBreakingChanges = commits.some((commit: any) => 
@@ -195,14 +195,14 @@ export class GitHubIngestorService implements OnModuleInit {
         return 'high';
       }
       
-      // 检查是否推送到主分支
+      // Check if pushed to main branch
       const ref = payload.ref;
       if (ref === 'refs/heads/main' || ref === 'refs/heads/master') {
         return 'medium';
       }
     }
 
-    // 检查Issues和PRs
+    // Check Issues and PRs
     if (eventType === 'IssuesEvent' || eventType === 'PullRequestEvent') {
       const action = payload.action;
       if (action === 'opened' && payload.issue?.labels?.some((label: any) => 
@@ -220,24 +220,24 @@ export class GitHubIngestorService implements OnModuleInit {
     
     const payload = githubEvent.payload || {};
     
-    // 添加action标签
+    // Add action tag
     if (payload.action) {
       tags.push(payload.action);
     }
 
-    // 添加标签
+    // Add labels
     if (payload.issue?.labels) {
       payload.issue.labels.forEach((label: any) => {
         tags.push(`label:${label.name}`);
       });
     }
 
-    // 添加用户标签
+    // Add user tag
     if (githubEvent.actor?.type) {
       tags.push(`actor:${githubEvent.actor.type}`);
     }
 
-    // 添加仓库标签
+    // Add repository tag
     if (githubEvent.repo?.private !== undefined) {
       tags.push(githubEvent.repo.private ? 'private' : 'public');
     }
@@ -282,8 +282,8 @@ export class GitHubIngestorService implements OnModuleInit {
 
   private async createIncidentFromEvent(event: EventDocument) {
     try {
-      // 这里可以调用事件处理服务来创建事件
-      // 暂时简单记录
+      // Here we can call the event processing service to create events
+      // For now, just log simply
       this.logger.warn(`High severity GitHub event detected: ${event.summary}`);
     } catch (error) {
       this.logger.error('Error creating incident from GitHub event:', error);

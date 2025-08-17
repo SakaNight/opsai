@@ -10,7 +10,10 @@ import { KafkaService } from './services/kafka.service';
 import { DatabaseService } from './services/database.service';
 import { RedisService } from './services/redis.service';
 import { LoggingService } from './services/logging.service';
+import { QdrantService } from './services/qdrant.service';
+import { DocumentProcessorService } from './services/document-processor.service';
 import { HealthController } from './health.controller';
+import { KnowledgeController } from './knowledge.controller';
 
 import { Event, EventSchema } from './schemas/event.schema';
 import { Incident, IncidentSchema } from './schemas/incident.schema';
@@ -28,7 +31,7 @@ import { Incident, IncidentSchema } from './schemas/incident.schema';
     ]),
     ScheduleModule.forRoot(),
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, KnowledgeController],
   providers: [
     WikimediaIngestorService,
     GitHubIngestorService,
@@ -37,6 +40,8 @@ import { Incident, IncidentSchema } from './schemas/incident.schema';
     DatabaseService,
     RedisService,
     LoggingService,
+    QdrantService,
+    DocumentProcessorService,
   ],
   exports: [
     WikimediaIngestorService,
@@ -46,6 +51,8 @@ import { Incident, IncidentSchema } from './schemas/incident.schema';
     DatabaseService,
     RedisService,
     LoggingService,
+    QdrantService,
+    DocumentProcessorService,
   ],
 })
 export class IngestorModule {}
