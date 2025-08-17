@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { KafkaService } from './services/kafka.service';
 import { DatabaseService } from './services/database.service';
 import { RedisService } from './services/redis.service';
+import { QdrantService } from './services/qdrant.service';
 
 @Controller('health')
 export class HealthController {
@@ -9,6 +10,7 @@ export class HealthController {
     private readonly kafkaService: KafkaService,
     private readonly databaseService: DatabaseService,
     private readonly redisService: RedisService,
+    private readonly qdrantService: QdrantService,
   ) {}
 
   @Get()
@@ -22,6 +24,7 @@ export class HealthController {
         kafka: 'unknown',
         database: 'unknown',
         redis: 'unknown',
+        qdrant: 'unknown',
       },
     };
 
@@ -49,6 +52,14 @@ export class HealthController {
       health.checks.redis = 'error';
     }
 
+    try {
+      // Check Qdrant health
+      const qdrantStatus = await this.qdrantService.healthCheck();
+      health.checks.qdrant = qdrantStatus ? 'ok' : 'error';
+    } catch (error) {
+      health.checks.qdrant = 'error';
+    }
+
     // Determine overall status
     const allChecks = Object.values(health.checks);
     if (allChecks.every(check => check === 'ok')) {
@@ -72,6 +83,7 @@ export class HealthController {
         kafka: false,
         database: false,
         redis: false,
+        qdrant: false,
       },
     };
 
@@ -85,6 +97,9 @@ export class HealthController {
 
       const redisStatus = await this.redisService.getStatus();
       readiness.checks.redis = redisStatus.isConnected;
+
+      const qdrantStatus = await this.qdrantService.healthCheck();
+      readiness.checks.qdrant = qdrantStatus;
 
       // Service is ready if all critical services are available
       const allReady = Object.values(readiness.checks).every(check => check === true);
